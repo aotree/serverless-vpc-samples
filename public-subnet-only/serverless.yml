@@ -1,0 +1,63 @@
+service: vpc-public-subnet-only
+
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  stage: dev
+  region: us-east-1
+
+resources:
+  Resources:
+    MyVPC:
+      Type: AWS::EC2::VPC
+      DeletionPolicy: Delete # default
+      Properties:
+        CidrBlock: 10.1.0.0/16
+        Tags:
+          - Key: Name
+            Value: MyVPC
+    MyInternetGateway:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: MyInternetGateway
+    VPCGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        VpcId: !Ref MyVPC
+        InternetGatewayId: !Ref MyInternetGateway
+    MyPublicSubnet:
+      DependsOn: MyVPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref MyVPC
+        CidrBlock: 10.1.0.0/24
+        Tags:
+          - Key: Name
+            Value: MyPublicSubnet
+    MyPublicRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref MyVPC
+        Tags:
+          - Key: Name
+            Value: MyPublicRouteTable
+    MyPublicRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref MyPublicRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref MyInternetGateway
+    SubnetRouteTableAssociationPublicSubnet:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref MyPublicSubnet
+        RouteTableId: !Ref MyPublicRouteTable
+    MySecurityGroup:
+      DependsOn: MyVPC
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup for My EC2
+        VpcId: !Ref MyVPC
